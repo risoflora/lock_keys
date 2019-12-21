@@ -9,12 +9,9 @@ repository = 'https://github.com/risoflora/lock_keys'
 readme = 'README.md'
 keywords = [
     'capslock',
-    'capitallock',
     'numlock',
     'numlockx',
-    'numberlock',
-    'scrlock',
-    'scrollinglock',
+    'scrolllock',
 ]
 categories = [
     'api-bindings',
