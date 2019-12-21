@@ -1,0 +1,30 @@
+[package]
+name = 'lock_keys'
+version = '1.0.0'
+authors = ['Silvio Clecio (silvioprog) <silvioprog@gmail.com>']
+license = 'MIT/Apache-2.0'
+description = 'Rust library for lock keys handling.'
+homepage = 'https://github.com/risoflora/lock_keys'
+repository = 'https://github.com/risoflora/lock_keys'
+readme = 'README.md'
+keywords = [
+    'capslock',
+    'capitallock',
+    'numlock',
+    'numlockx',
+    'numberlock',
+    'scrlock',
+    'scrollinglock',
+]
+categories = [
+    'api-bindings',
+    'hardware-support',
+    'os::macos-apis',
+    'os::unix-apis',
+    'os::windows-apis',
+]
+
+[dependencies]
+[target."cfg(windows)".dependencies.winapi]
+version = '0.3'
+features = ['winuser']
