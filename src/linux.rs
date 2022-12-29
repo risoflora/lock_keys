@@ -3,7 +3,7 @@ use std::mem;
 use std::os::raw::{c_char, c_int, c_uchar, c_uint, c_ulong, c_ushort};
 use std::ptr;
 
-use {LockKey, LockKeyResult, LockKeyState, LockKeyWrapper, LockKeys};
+use crate::{LockKey, LockKeyResult, LockKeyState, LockKeyWrapper, LockKeys};
 
 #[doc(hidden)]
 #[allow(non_upper_case_globals)]
@@ -44,7 +44,6 @@ pub struct XkbStateRec {
 #[doc(hidden)]
 pub type XkbStatePtr = *mut XkbStateRec;
 
-#[doc(hidden)]
 #[link(name = "X11")]
 extern "C" {
     pub fn XOpenDisplay(display_name: *const c_char) -> *mut Display;
@@ -65,15 +64,7 @@ extern "C" {
 
 #[doc(hidden)]
 #[macro_export]
-macro_rules! xkb_raise_error {
-    ($ident:expr) => {
-        Error::new(ErrorKind::Other, $ident)
-    };
-}
-
-#[doc(hidden)]
-#[macro_export]
-macro_rules! xkb_lockkey_mask {
+macro_rules! xkb_lock_key_mask {
     ($handle:expr,$key:expr) => {
         XkbKeysymToModifiers(
             $handle as *mut _,
@@ -82,38 +73,7 @@ macro_rules! xkb_lockkey_mask {
                 LockKeys::NumberLock => XK_Num_Lock,
                 LockKeys::ScrollingLock => XK_Scroll_Lock,
             } as KeySym,
-        );
-    };
-}
-
-#[doc(hidden)]
-#[macro_export]
-macro_rules! xkb_lockkey_set {
-    ($handle:expr,$mask:expr,$enabled:expr) => {
-        XkbLockModifiers(
-            $handle as *mut _,
-            XkbUseCoreKbd,
-            $mask,
-            if $enabled { $mask } else { 0 },
-        ) == 1
-    };
-}
-
-#[doc(hidden)]
-#[macro_export]
-macro_rules! xkb_lockkey_state {
-    ($handle:expr,$mask:expr) => {{
-        let mut state: XkbStateRec = mem::zeroed();
-        XkbGetState($handle as *mut _, XkbUseCoreKbd, &mut state);
-        (state.locked_mods as c_uint) & $mask != 0
-    }};
-}
-
-#[doc(hidden)]
-#[macro_export]
-macro_rules! xkb_lockkey_set_error {
-    () => {
-        xkb_raise_error!("XkbLockModifiers")
+        )
     };
 }
 
@@ -128,12 +88,17 @@ impl LockKeyWrapper for LockKey {
     /// Sets a new state for the lock key using [Xlib](https://en.wikipedia.org/wiki/Xlib).
     fn set(&self, key: LockKeys, state: LockKeyState) -> LockKeyResult {
         unsafe {
-            let mask = xkb_lockkey_mask!(self.handle, key);
-            if xkb_lockkey_set!(self.handle, mask, state.into()) {
-                Ok(state)
-            } else {
-                Err(xkb_lockkey_set_error!())
+            let mask = xkb_lock_key_mask!(self.handle, key);
+            if XkbLockModifiers(
+                self.handle as *mut _,
+                XkbUseCoreKbd,
+                mask,
+                if state.into() { mask } else { 0 },
+            ) != 1
+            {
+                return Err(Error::new(ErrorKind::Other, "XkbLockModifiers"));
             }
+            Ok(state)
         }
     }
 
@@ -149,23 +114,18 @@ impl LockKeyWrapper for LockKey {
 
     /// Toggles the lock key state returning its previous state using [Xlib](https://en.wikipedia.org/wiki/Xlib).
     fn toggle(&self, key: LockKeys) -> LockKeyResult {
-        unsafe {
-            let mask = xkb_lockkey_mask!(self.handle, key);
-            let state = xkb_lockkey_state!(self.handle, mask);
-            if xkb_lockkey_set!(self.handle, mask, !state) {
-                Ok(state.into())
-            } else {
-                Err(xkb_lockkey_set_error!())
-            }
-        }
+        let state = self.state(key)?;
+        self.set(key, state.toggle())?;
+        Ok(state)
     }
 
     /// Retrieves the lock key state using [Xlib](https://en.wikipedia.org/wiki/Xlib).
     fn state(&self, key: LockKeys) -> LockKeyResult {
         unsafe {
-            let mask = xkb_lockkey_mask!(self.handle, key);
-            let state = xkb_lockkey_state!(self.handle, mask);
-            Ok(state.into())
+            let mask = xkb_lock_key_mask!(self.handle, key);
+            let mut state: XkbStateRec = mem::zeroed();
+            XkbGetState(self.handle as *mut _, XkbUseCoreKbd, &mut state);
+            Ok(((state.locked_mods as c_uint) & mask != 0).into())
         }
     }
 }
