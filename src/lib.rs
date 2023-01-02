@@ -1,30 +1,28 @@
 //! `lock_keys` provides a cross platform way for lock keys handling.
 //!
-//! Supported platforms: Linux ([Xlib](https://en.wikipedia.org/wiki/Xlib) static) and Windows ([winuser API](https://docs.microsoft.com/en-us/windows/win32/api/winuser)).
+//! Supported platforms: Linux ([Xlib](https://en.wikipedia.org/wiki/Xlib) static), Windows ([winuser API](https://docs.microsoft.com/en-us/windows/win32/api/winuser)) and macOS ([IOKit](https://developer.apple.com/documentation/iokit)).
 //!
 //! # Example
 //!
-//! The example below shows how to turn on the Number Lock key:
+//! The example below shows how to toggle the state of the Capital Lock key:
 //!
 //! ```rust
-//! extern crate lock_keys;
-//!
 //! use lock_keys::*;
 //!
 //! fn main() {
-//!     let lockkey = LockKey::new();
-//!     lockkey.enable(LockKeys::NumberLock).unwrap();
+//!     let lock_key = LockKey::new();
+//!     lock_key.enable(LockKeys::CapitalLock).unwrap();
 //! }
 //! ```
-
-#[cfg(target_os = "windows")]
-extern crate winapi;
 
 #[cfg(target_os = "linux")]
 mod linux;
 
 #[cfg(target_os = "windows")]
 mod windows;
+
+#[cfg(target_os = "macos")]
+mod macos;
 
 use std::fmt;
 use std::io;
@@ -37,6 +35,15 @@ enum LockKeyHandle {}
 pub enum LockKeyState {
     Enabled,
     Disabled,
+}
+
+impl LockKeyState {
+    pub fn toggle(self) -> Self {
+        match self {
+            Self::Enabled => Self::Disabled,
+            Self::Disabled => Self::Enabled,
+        }
+    }
 }
 
 impl From<bool> for LockKeyState {
@@ -108,111 +115,111 @@ mod tests {
 
     #[test]
     fn set() {
-        let lockkey = LockKey::new();
-        let old_lockkey_state = lockkey.state(LockKeys::NumberLock).unwrap();
+        let lock_key = LockKey::new();
+        let old_lock_key_state = lock_key.state(LockKeys::CapitalLock).unwrap();
         assert_eq!(
-            lockkey
-                .set(LockKeys::NumberLock, LockKeyState::Disabled)
+            lock_key
+                .set(LockKeys::CapitalLock, LockKeyState::Disabled)
                 .unwrap(),
             LockKeyState::Disabled
         );
         assert_eq!(
-            lockkey.state(LockKeys::NumberLock).unwrap(),
+            lock_key.state(LockKeys::CapitalLock).unwrap(),
             LockKeyState::Disabled
         );
         assert_eq!(
-            lockkey
-                .set(LockKeys::NumberLock, LockKeyState::Enabled)
+            lock_key
+                .set(LockKeys::CapitalLock, LockKeyState::Enabled)
                 .unwrap(),
             LockKeyState::Enabled
         );
         assert_eq!(
-            lockkey.state(LockKeys::NumberLock).unwrap(),
+            lock_key.state(LockKeys::CapitalLock).unwrap(),
             LockKeyState::Enabled
         );
-        lockkey
-            .set(LockKeys::NumberLock, old_lockkey_state)
+        lock_key
+            .set(LockKeys::CapitalLock, old_lock_key_state)
             .unwrap();
     }
 
     #[test]
     fn enable() {
-        let lockkey = LockKey::new();
-        let old_lockkey_state = lockkey.state(LockKeys::CapitalLock).unwrap();
-        lockkey.disable(LockKeys::CapitalLock).unwrap();
+        let lock_key = LockKey::new();
+        let old_lock_key_state = lock_key.state(LockKeys::CapitalLock).unwrap();
+        lock_key.disable(LockKeys::CapitalLock).unwrap();
         assert_eq!(
-            lockkey.state(LockKeys::CapitalLock).unwrap(),
+            lock_key.state(LockKeys::CapitalLock).unwrap(),
             LockKeyState::Disabled
         );
         assert_eq!(
-            lockkey.enable(LockKeys::CapitalLock).unwrap(),
+            lock_key.enable(LockKeys::CapitalLock).unwrap(),
             LockKeyState::Enabled
         );
         assert_eq!(
-            lockkey.state(LockKeys::CapitalLock).unwrap(),
+            lock_key.state(LockKeys::CapitalLock).unwrap(),
             LockKeyState::Enabled
         );
-        lockkey
-            .set(LockKeys::CapitalLock, old_lockkey_state)
+        lock_key
+            .set(LockKeys::CapitalLock, old_lock_key_state)
             .unwrap();
     }
 
     #[test]
     fn disable() {
-        let lockkey = LockKey::new();
-        let old_lockkey_state = lockkey.state(LockKeys::CapitalLock).unwrap();
-        lockkey.enable(LockKeys::CapitalLock).unwrap();
+        let lock_key = LockKey::new();
+        let old_lock_key_state = lock_key.state(LockKeys::CapitalLock).unwrap();
+        lock_key.enable(LockKeys::CapitalLock).unwrap();
         assert_eq!(
-            lockkey.state(LockKeys::CapitalLock).unwrap(),
+            lock_key.state(LockKeys::CapitalLock).unwrap(),
             LockKeyState::Enabled
         );
         assert_eq!(
-            lockkey.disable(LockKeys::CapitalLock).unwrap(),
+            lock_key.disable(LockKeys::CapitalLock).unwrap(),
             LockKeyState::Disabled
         );
         assert_eq!(
-            lockkey.state(LockKeys::CapitalLock).unwrap(),
+            lock_key.state(LockKeys::CapitalLock).unwrap(),
             LockKeyState::Disabled
         );
-        lockkey
-            .set(LockKeys::CapitalLock, old_lockkey_state)
+        lock_key
+            .set(LockKeys::CapitalLock, old_lock_key_state)
             .unwrap();
     }
 
     #[test]
     fn toggle() {
-        let lockkey = LockKey::new();
-        let old_lockkey_state = lockkey.state(LockKeys::ScrollingLock).unwrap();
-        lockkey.enable(LockKeys::ScrollingLock).unwrap();
+        let lock_key = LockKey::new();
+        let old_lock_key_state = lock_key.state(LockKeys::CapitalLock).unwrap();
+        lock_key.enable(LockKeys::CapitalLock).unwrap();
         assert_eq!(
-            lockkey.toggle(LockKeys::ScrollingLock).unwrap(),
+            lock_key.toggle(LockKeys::CapitalLock).unwrap(),
             LockKeyState::Enabled
         );
         assert_eq!(
-            lockkey.toggle(LockKeys::ScrollingLock).unwrap(),
+            lock_key.toggle(LockKeys::CapitalLock).unwrap(),
             LockKeyState::Disabled
         );
-        lockkey
-            .set(LockKeys::ScrollingLock, old_lockkey_state)
+        lock_key
+            .set(LockKeys::CapitalLock, old_lock_key_state)
             .unwrap();
     }
 
     #[test]
     fn state() {
-        let lockkey = LockKey::new();
-        let old_lockkey_state = lockkey.state(LockKeys::NumberLock).unwrap();
-        lockkey.enable(LockKeys::NumberLock).unwrap();
+        let lock_key = LockKey::new();
+        let old_lock_key_state = lock_key.state(LockKeys::CapitalLock).unwrap();
+        lock_key.enable(LockKeys::CapitalLock).unwrap();
         assert_eq!(
-            lockkey.state(LockKeys::NumberLock).unwrap(),
+            lock_key.state(LockKeys::CapitalLock).unwrap(),
             LockKeyState::Enabled
         );
-        lockkey.disable(LockKeys::NumberLock).unwrap();
+        lock_key.disable(LockKeys::CapitalLock).unwrap();
         assert_eq!(
-            lockkey.toggle(LockKeys::NumberLock).unwrap(),
+            lock_key.toggle(LockKeys::CapitalLock).unwrap(),
             LockKeyState::Disabled
         );
-        lockkey
-            .set(LockKeys::ScrollingLock, old_lockkey_state)
+        lock_key
+            .set(LockKeys::CapitalLock, old_lock_key_state)
             .unwrap();
     }
 }
