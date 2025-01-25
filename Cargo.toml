@@ -24,4 +24,4 @@ features = ['winuser']
 [target.'cfg(target_os = "macos")'.dependencies]
 core-foundation = '0.9'
 mach = '0.3'
-io-kit-sys = '0.2'
+io-kit-sys = '0.4'
