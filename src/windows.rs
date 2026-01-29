@@ -1,7 +1,6 @@
 use std::ptr;
 
-use winapi::shared::minwindef::BYTE;
-use winapi::um::winuser::{
+use windows::Win32::UI::Input::KeyboardAndMouse::{
     keybd_event, GetKeyState, KEYEVENTF_EXTENDEDKEY, KEYEVENTF_KEYUP, VK_CAPITAL, VK_NUMLOCK,
     VK_SCROLL,
 };
@@ -31,9 +30,10 @@ impl LockKeyWrapper for LockKey {
     /// Sets a new state for the lock key using [winuser API](https://docs.microsoft.com/en-us/windows/win32/api/winuser).
     fn set(&self, key: LockKeys, state: LockKeyState) -> LockKeyResult {
         unsafe {
-            let key = lock_key_to_vkkey!(key) as BYTE;
-            keybd_event(key, 0x45, KEYEVENTF_EXTENDEDKEY | 0, 0);
-            keybd_event(key, 0x45, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
+            let vk = lock_key_to_vkkey!(key);
+            let key_byte = vk.0 as u8;
+            keybd_event(key_byte, 0x45, KEYEVENTF_EXTENDEDKEY, 0);
+            keybd_event(key_byte, 0x45, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
         }
         Ok(state)
     }
@@ -57,7 +57,7 @@ impl LockKeyWrapper for LockKey {
 
     /// Retrieves the lock key state using [winuser API](https://docs.microsoft.com/en-us/windows/win32/api/winuser).
     fn state(&self, key: LockKeys) -> LockKeyResult {
-        let key_state = unsafe { GetKeyState(lock_key_to_vkkey!(key)) == 1 };
+        let key_state = unsafe { GetKeyState(lock_key_to_vkkey!(key).0 as i32) == 1 };
         Ok(key_state.into())
     }
 }
