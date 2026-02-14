@@ -30,10 +30,13 @@ impl LockKeyWrapper for LockKey {
 
     /// Sets a new state for the lock key using [winuser API](https://docs.microsoft.com/en-us/windows/win32/api/winuser).
     fn set(&self, key: LockKeys, state: LockKeyState) -> LockKeyResult {
-        unsafe {
-            let key = lock_key_to_vkkey!(key) as BYTE;
-            keybd_event(key, 0x45, KEYEVENTF_EXTENDEDKEY | 0, 0);
-            keybd_event(key, 0x45, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
+        let current = self.state(key)?;
+        if current != state {
+            unsafe {
+                let key = lock_key_to_vkkey!(key) as BYTE;
+                keybd_event(key, 0x45, KEYEVENTF_EXTENDEDKEY | 0, 0);
+                keybd_event(key, 0x45, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
+            }
         }
         Ok(state)
     }
